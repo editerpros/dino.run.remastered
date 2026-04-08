@@ -1,7 +1,6 @@
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
-// Game Config
 const W = 800, H = 200;
 canvas.width = W; canvas.height = H;
 
@@ -15,7 +14,6 @@ const state = {
     entities: []
 };
 
-// Real Pixel Sprite Maps (v26.2 Upgrade)
 const SPRITES = {
     dino: [[0,0,0,1,1,1,1,0],[0,0,0,1,1,0,1,1],[0,0,0,1,1,1,1,1],[1,1,1,1,1,1,0,0],[1,1,1,1,1,1,1,0],[0,0,1,1,1,1,1,0],[0,0,1,0,0,1,0,0]],
     cactus: [[0,1,1,0],[1,1,1,1],[0,1,1,0],[0,1,1,0]],
@@ -67,10 +65,12 @@ const game = {
     toggleSound: () => {
         state.sound = !state.sound;
         document.getElementById('toggle-sound').innerText = `SOUND: ${state.sound ? 'ON' : 'OFF'}`;
+    },
+    toggleFX: () => {
+        // FX Logic placeholder
     }
 };
 
-// Input Handling (PC: Space/Arrows, Mobile: Touch)
 const keys = {};
 window.onkeydown = (e) => {
     keys[e.code] = true;
@@ -93,22 +93,19 @@ function update() {
 
     [player1, player2].forEach(p => {
         if (!p) return;
-        // Gravity & Ducking (ArrowDown / S)
         p.duck = (p === player1 && keys['ArrowDown']) || (p === player2 && keys['KeyS']);
         p.vy += 0.6;
         p.y += p.vy;
         if (p.y > 150) { p.y = 150; p.ground = true; }
     });
 
-    // Spawn Obstacles
     if (state.frame % 80 === 0) {
         state.entities.push(new Entity(W, 160, 25, 35, 'cactus', '#535353'));
     }
 
     state.entities.forEach((ent, i) => {
         ent.x -= state.speed;
-        // Simple Collision
-        if (player1 && checkHit(player1, ent)) gameOver("PLAYER 2 WINS!");
+        if (player1 && checkHit(player1, ent)) gameOver(state.mode === 'local' ? "PLAYER 2 WINS!" : "GAME OVER");
         if (player2 && checkHit(player2, ent)) gameOver("PLAYER 1 WINS!");
     });
 
@@ -116,18 +113,21 @@ function update() {
 }
 
 function checkHit(p, e) {
-    return p.x < e.x + e.w && p.x + p.w > e.x && p.y < e.y + e.h && p.y + p.h > e.y;
+    const pad = 5;
+    return p.x + pad < e.x + e.w - pad && 
+           p.x + p.w - pad > e.x + pad && 
+           p.y + pad < e.y + e.h - pad && 
+           p.y + p.h - pad > e.y + pad;
 }
 
 function gameOver(msg) {
     state.mode = 'over';
     document.getElementById('game-over').classList.remove('hidden');
-    document.getElementById('winner-text').innerText = state.mode === 'local' ? msg : "GAME OVER";
+    document.getElementById('winner-text').innerText = msg;
 }
 
 function loop() {
     ctx.clearRect(0, 0, W, H);
-    // Ground
     ctx.fillStyle = '#535353';
     ctx.fillRect(0, 190, W, 2);
 
