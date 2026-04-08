@@ -35,7 +35,6 @@ canvas {
     display: block;
 }
 
-/* UI Logic */
 .overlay {
     position: absolute;
     inset: 0;
@@ -88,7 +87,6 @@ button.disabled { opacity: 0.5; cursor: not-allowed; }
     margin-bottom: 10px;
 }
 
-/* Mobile Optimization */
 @media (max-width: 600px) {
     #game-container { height: 180px; border-width: 2px; }
     h1 { font-size: 14px; }
