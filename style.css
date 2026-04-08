@@ -1,100 +1,96 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-  --bg: #f7f3e9;
-  --dino: #535353;
-  --text: #535353;
-  --accent: #e05c2a;
+    --bg: #f7f3e9;
+    --dino: #535353;
+    --accent: #e05c2a;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+* { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
 
 body {
-  background: #222;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-family: 'Press Start 2P', monospace;
-  overflow: hidden;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    font-family: 'Press Start 2P', cursive;
+    overflow: hidden;
 }
 
 #game-container {
-  position: relative;
-  background: var(--bg);
-  width: min(800px, 98vw);
-  height: min(250px, 40vh);
-  border: 4px solid var(--dino);
-  overflow: hidden;
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 200px;
+    background: var(--bg);
+    border: 4px solid var(--dino);
+    image-rendering: pixelated;
 }
 
 canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  image-rendering: pixelated;
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
-/* Overlays */
+/* UI Logic */
 .overlay {
-  position: absolute;
-  inset: 0;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  text-align: center;
-  padding: 10px;
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
 }
 
 .hidden { display: none !important; }
 
-h1 { font-size: 1.5rem; margin-bottom: 20px; color: var(--text); }
-h2 { font-size: 1rem; margin-bottom: 15px; color: var(--accent); }
+h1 { font-size: 18px; margin-bottom: 20px; color: var(--dino); }
+h2 { font-size: 14px; margin-bottom: 15px; color: var(--accent); }
 
-.menu-options, .setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.btn-group { display: flex; flex-direction: column; gap: 8px; width: 220px; }
 
 button {
-  background: var(--text);
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  cursor: pointer;
+    background: var(--dino);
+    color: white;
+    border: none;
+    padding: 10px;
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    cursor: pointer;
+    transition: transform 0.1s;
 }
 
+button:active { transform: scale(0.95); }
 button:hover { background: var(--accent); }
+button.back { background: #888; margin-top: 10px; }
+button.disabled { opacity: 0.5; cursor: not-allowed; }
 
-.back-btn { margin-top: 15px; background: #999; }
+#game-stats {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 10px;
+    color: var(--dino);
+    z-index: 10;
+}
 
 .scroll-box {
-  font-size: 8px;
-  text-align: left;
-  max-width: 80%;
-  line-height: 1.5;
+    font-size: 7px;
+    line-height: 1.6;
+    max-height: 80px;
+    overflow-y: auto;
+    text-align: left;
+    margin-bottom: 10px;
 }
 
-#score-board {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  left: 10px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text);
-  z-index: 5;
-}
-
-/* Responsive adjustments */
+/* Mobile Optimization */
 @media (max-width: 600px) {
-    h1 { font-size: 1rem; }
-    button { font-size: 8px; padding: 6px 12px; }
+    #game-container { height: 180px; border-width: 2px; }
+    h1 { font-size: 14px; }
+    button { padding: 12px; font-size: 7px; }
 }
