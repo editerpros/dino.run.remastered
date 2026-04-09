@@ -5,7 +5,7 @@ canvas.width = W; canvas.height = H;
 
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
-// --- ASSET LOADER (Pointing to assets/ folder) ---
+// --- ASSET LOADER ---
 const assets = {};
 const assetNames = [
     'DinoStart', 'DinoRun1', 'DinoRun2', 'DinoJump', 'DinoDead', 
@@ -17,7 +17,6 @@ const assetNames = [
 
 assetNames.forEach(name => {
     assets[name] = new Image();
-    // Added the 'assets/' prefix to the source path
     assets[name].src = `assets/${name}.png`; 
 });
 
@@ -149,7 +148,15 @@ function update() {
         player1.duck = keys['ArrowDown'] || keys['KeyS'];
         player1.vy += 0.6; player1.y += player1.vy;
         if (player1.y > 150) { player1.y = 150; player1.ground = true; }
-        if(state.mode === 'online' && online.roomId) socket.emit('sync', { roomId: online.roomId, x: player1.x, y: player1.y, duck: player1.duck });
+        if(state.mode === 'online' && online.roomId) {
+            socket.emit('sync', { 
+                roomId: online.roomId, 
+                nickname: state.nickname,
+                x: player1.x, 
+                y: player1.y, 
+                duck: player1.duck 
+            });
+        }
     }
 
     if (state.frame % 120 === 0) {
@@ -208,14 +215,14 @@ function loop() {
     if (state.mode !== 'menu') {
         state.trackX -= state.speed;
         if (state.trackX <= -W) state.trackX = 0;
-        if (assets['Track'].complete) {
+        if (assets['Track'] && assets['Track'].complete) {
             ctx.drawImage(assets['Track'], state.trackX, 185, W, 12);
             ctx.drawImage(assets['Track'], state.trackX + W, 185, W, 12);
         }
     }
 
     state.clouds.forEach(c => {
-        if (assets['Cloud'].complete) ctx.drawImage(assets['Cloud'], c.x, c.y, 46, 14);
+        if (assets['Cloud'] && assets['Cloud'].complete) ctx.drawImage(assets['Cloud'], c.x, c.y, 46, 14);
     });
 
     if (state.mode !== 'menu') {
@@ -225,7 +232,7 @@ function loop() {
         Object.values(online.remotePlayers).forEach(p => { 
             const anim = Math.floor(state.frame / 10) % 2;
             const img = (anim === 0) ? assets['DinoRun1'] : assets['DinoRun2'];
-            if (img.complete) {
+            if (img && img.complete) {
                 ctx.globalAlpha = 0.5;
                 ctx.drawImage(img, p.x, p.y, 44, 47);
                 ctx.globalAlpha = 1.0;
@@ -234,13 +241,14 @@ function loop() {
         
         state.entities.forEach(e => e.draw());
 
-        if (state.mode === 'over' && assets['GameOver'].complete) {
+        if (state.mode === 'over' && assets['GameOver'] && assets['GameOver'].complete) {
             ctx.drawImage(assets['GameOver'], W/2 - 95, H/2 - 20, 190, 11);
         }
     }
     requestAnimationFrame(loop);
 }
 
+// --- MULTIPLAYER LOGIC ---
 socket.on('update-leaderboard', (data) => {
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
@@ -252,9 +260,19 @@ socket.on('player-moved', (data) => {
     online.remotePlayers[data.id] = { x: data.x, y: data.y, duck: data.duck };
 });
 
+// Bridge to HTML buttons
 const onlineLobby = {
-    create: () => socket.emit('create-room', { max: parseInt(document.getElementById('max-p').value) }),
-    join: () => { const id = document.getElementById('room-input').value; if(id) socket.emit('join-room', id); }
+    create: () => {
+        const nick = document.getElementById('nick-input').value.trim() || "Dino";
+        const max = parseInt(document.getElementById('max-p').value);
+        socket.emit('create-room', { max: max, nickname: nick });
+    },
+    join: () => {
+        const nick = document.getElementById('nick-input').value.trim() || "Dino";
+        const id = document.getElementById('room-input').value;
+        if(id) socket.emit('join-room', { roomId: id, nickname: nick });
+    }
 };
-window.online = onlineLobby;
+
+window.online = onlineLobby; 
 loop();
