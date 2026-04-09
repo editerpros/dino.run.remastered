@@ -65,7 +65,7 @@ class Entity {
 
     draw() {
         let img;
-        const animFrame = Math.floor(state.frame / 10) % 2; // Cycle animation frames
+        const animFrame = Math.floor(state.frame / 10) % 2;
 
         if (this.type === 'dino') {
             if (state.mode === 'over') img = assets['DinoDead'];
@@ -139,7 +139,6 @@ function update() {
     state.frame++; state.score += 0.1;
     const s = Math.floor(state.score);
     
-    // Biome Logic
     if (s === 500 && state.biome === 'desert') applyBiome('jungle');
     if (s === 1000 && state.biome === 'jungle') applyBiome('city');
     if (s === 1500 && state.biome === 'city') applyBiome('night');
@@ -151,7 +150,6 @@ function update() {
         player1.vy += 0.6; player1.y += player1.vy;
         if (player1.y > 150) { player1.y = 150; player1.ground = true; }
         
-        // Multiplayer Sync
         if(state.mode === 'online' && online.roomId) {
             socket.emit('sync', { 
                 roomId: online.roomId, 
@@ -232,7 +230,6 @@ function loop() {
         update();
         if(player1) player1.draw();
         
-        // Remote Players
         Object.values(online.remotePlayers).forEach(p => { 
             const anim = Math.floor(state.frame / 10) % 2;
             const img = (anim === 0) ? assets['DinoRun1'] : assets['DinoRun2'];
@@ -253,68 +250,38 @@ function loop() {
 }
 
 // --- MULTIPLAYER CORE ---
-
-// Log connection status for debugging
-socket.on('connect', () => {
-    console.log("Connected to Render Server: " + socket.id);
-});
-
-socket.on('connect_error', (err) => {
-    console.error("Connection Error: Server might be waking up. Please wait...");
-});
-
 socket.on('update-leaderboard', (data) => {
     const list = document.getElementById('leaderboard-list');
     if (list) list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
 });
 
 socket.on('joined', (data) => { 
-    console.log("Joined room: " + data.roomId);
     online.roomId = data.roomId; 
     game.start('online'); 
-});
-
-// Listener for room errors (Room full, not found, etc.)
-socket.on('error-msg', (msg) => {
-    alert(msg);
 });
 
 socket.on('player-moved', (data) => {
     online.remotePlayers[data.id] = { x: data.x, y: data.y, duck: data.duck, nickname: data.nickname };
 });
 
-// Listener for when a player leaves the room
-socket.on('player-left', (id) => {
-    delete online.remotePlayers[id];
-});
-
-// --- BRIDGE TO HTML BUTTONS ---
+// --- THE CRITICAL BRIDGE FIX ---
+// We define the object and then attach it to 'window' so index.html can find it.
 const onlineLobby = {
     create: () => {
-        if(!socket.connected) {
-            alert("Still connecting to server... please wait 30 seconds and try again.");
-            return;
-        }
+        if (!socket.connected) return alert("Connecting to server...");
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
         const max = parseInt(document.getElementById('max-p').value);
-        console.log("Creating room as: " + nick);
         socket.emit('create-room', { max: max, nickname: nick });
     },
     join: () => {
-        if(!socket.connected) {
-            alert("Still connecting to server...");
-            return;
-        }
+        if (!socket.connected) return alert("Connecting to server...");
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
         const id = document.getElementById('room-input').value.trim();
-        if(id) {
-            console.log("Joining room: " + id);
-            socket.emit('join-room', { roomId: id, nickname: nick });
-        } else {
-            alert("Please enter a Room ID");
-        }
+        if(id) socket.emit('join-room', { roomId: id, nickname: nick });
     }
 };
 
+// Global attachment - this resolves "online.join is not a function"
 window.online = onlineLobby; 
+
 loop();
