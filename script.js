@@ -3,7 +3,6 @@ const ctx = canvas.getContext('2d');
 const W = 800, H = 200;
 canvas.width = W; canvas.height = H;
 
-// Secure HTTPS connection to your Render backend
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
 // --- ASSET LOADER ---
@@ -16,7 +15,6 @@ const assetNames = [
     'LargeCactus1', 'LargeCactus2', 'LargeCactus3'
 ];
 
-// Load all images from the assets/ folder
 assetNames.forEach(name => {
     assets[name] = new Image();
     assets[name].src = `assets/${name}.png`; 
@@ -25,7 +23,8 @@ assetNames.forEach(name => {
 let state = {
     mode: 'menu',
     score: 0,
-    hiScore: 0,
+    // LOAD HIGH SCORE: Pull from local storage or default to 0
+    hiScore: parseInt(localStorage.getItem('dinoHiScore')) || 0,
     speed: 6,
     frame: 0,
     entities: [],
@@ -114,6 +113,9 @@ const game = {
         document.getElementById('game-over').classList.add('hidden');
         document.getElementById('game-stats').classList.remove('hidden');
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
+        
+        // Update High Score UI on start
+        document.getElementById('hi-val').innerText = state.hiScore.toString().padStart(5, '0');
     },
     restart: () => game.start(state.mode)
 };
@@ -205,7 +207,16 @@ function checkHit(p, e) {
 
 function gameOver() {
     Sound.die();
-    socket.emit('submit-score', { name: state.nickname, score: Math.floor(state.score) });
+    const finalScore = Math.floor(state.score);
+    socket.emit('submit-score', { name: state.nickname, score: finalScore });
+    
+    // SAVE TO LOCAL STORAGE: Check if current score is a record
+    if (finalScore > state.hiScore) {
+        state.hiScore = finalScore;
+        localStorage.setItem('dinoHiScore', state.hiScore);
+        document.getElementById('hi-val').innerText = state.hiScore.toString().padStart(5, '0');
+    }
+
     state.mode = 'over';
     document.getElementById('game-over').classList.remove('hidden');
 }
@@ -250,23 +261,19 @@ function loop() {
 }
 
 // --- MULTIPLAYER CORE ---
+socket.on('connect', () => { console.log("Connected to Server: " + socket.id); });
+
 socket.on('update-leaderboard', (data) => {
     const list = document.getElementById('leaderboard-list');
     if (list) list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
 });
 
-socket.on('joined', (data) => { 
-    online.roomId = data.roomId; 
-    game.start('online'); 
-});
+socket.on('joined', (data) => { online.roomId = data.roomId; game.start('online'); });
 
 socket.on('player-moved', (data) => {
     online.remotePlayers[data.id] = { x: data.x, y: data.y, duck: data.duck, nickname: data.nickname };
 });
 
-// --- THE CRITICAL BRIDGE FIX ---
-// We define the object and then attach it to 'window' so index.html can find it.
-// At the very end of your script.js file
 const onlineLobby = {
     create: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
@@ -280,7 +287,5 @@ const onlineLobby = {
     }
 };
 
-// THIS IS THE FIX: It creates a global "bridge" for the HTML
 window.online = onlineLobby; 
-
 loop();
