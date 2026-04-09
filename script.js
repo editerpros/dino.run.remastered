@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 const W = 800, H = 200;
 canvas.width = W; canvas.height = H;
 
-// Ensure HTTPS is used for the socket connection to avoid mixed-content blocks
+// Using HTTPS to ensure secure connection with Render backend
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
 // --- ASSET LOADER ---
@@ -18,7 +18,8 @@ const assetNames = [
 
 assetNames.forEach(name => {
     assets[name] = new Image();
-    assets[name].src = `assets/${name}.png`; // Updated path for the assets folder
+    // Correctly prefixing path with assets/ folder
+    assets[name].src = `assets/${name}.png`; 
 });
 
 let state = {
@@ -64,7 +65,7 @@ class Entity {
 
     draw() {
         let img;
-        const animFrame = Math.floor(state.frame / 10) % 2; // Frame cycling
+        const animFrame = Math.floor(state.frame / 10) % 2; // Cycle animation frames
 
         if (this.type === 'dino') {
             if (state.mode === 'over') img = assets['DinoDead'];
@@ -91,8 +92,9 @@ const online = { roomId: null, remotePlayers: {} };
 const ui = {
     show: (name) => {
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
-        document.getElementById(`menu-${name}`).classList.remove('hidden');
-        if(name === 'leaderboard') socket.emit('get-leaderboard');
+        const target = document.getElementById(`menu-${name}`);
+        if (target) target.classList.remove('hidden');
+        if (name === 'leaderboard') socket.emit('get-leaderboard');
     }
 };
 
@@ -112,8 +114,6 @@ const game = {
         document.getElementById('game-over').classList.add('hidden');
         document.getElementById('game-stats').classList.remove('hidden');
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
-        
-        if(typeof gtag === 'function') gtag('event', 'game_start', { 'game_mode': mode });
     },
     restart: () => game.start(state.mode)
 };
@@ -150,7 +150,6 @@ function update() {
         player1.vy += 0.6; player1.y += player1.vy;
         if (player1.y > 150) { player1.y = 150; player1.ground = true; }
         
-        // Sync player state with server
         if(state.mode === 'online' && online.roomId) {
             socket.emit('sync', { 
                 roomId: online.roomId, 
@@ -209,7 +208,6 @@ function gameOver() {
     socket.emit('submit-score', { name: state.nickname, score: Math.floor(state.score) });
     state.mode = 'over';
     document.getElementById('game-over').classList.remove('hidden');
-    if(typeof gtag === 'function') gtag('event', 'game_over', { 'score': Math.floor(state.score) });
 }
 
 function loop() {
@@ -232,7 +230,6 @@ function loop() {
         update();
         if(player1) player1.draw();
         
-        // Multiplayer shadow dinos
         Object.values(online.remotePlayers).forEach(p => { 
             const anim = Math.floor(state.frame / 10) % 2;
             const img = (anim === 0) ? assets['DinoRun1'] : assets['DinoRun2'];
@@ -252,10 +249,10 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// --- MULTIPLAYER SOCKET HANDLERS ---
+// --- MULTIPLAYER CORE ---
 socket.on('update-leaderboard', (data) => {
     const list = document.getElementById('leaderboard-list');
-    list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
+    if (list) list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
 });
 
 socket.on('joined', (data) => { 
@@ -264,16 +261,11 @@ socket.on('joined', (data) => {
 });
 
 socket.on('player-moved', (data) => {
-    // Correctly handle nicknames and positions from server
-    online.remotePlayers[data.id] = { 
-        x: data.x, 
-        y: data.y, 
-        duck: data.duck,
-        nickname: data.nickname 
-    };
+    online.remotePlayers[data.id] = { x: data.x, y: data.y, duck: data.duck, nickname: data.nickname };
 });
 
-// Bridge to HTML buttons
+// --- BRIDGE TO HTML BUTTONS ---
+// Fixed TypeError by assigning directly to window
 const onlineLobby = {
     create: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
@@ -283,9 +275,9 @@ const onlineLobby = {
     join: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
         const id = document.getElementById('room-input').value.trim();
-        if(id) socket.emit('join-room', { roomId: id, nickname: nick }); // Fix: send object
+        if(id) socket.emit('join-room', { roomId: id, nickname: nick });
     }
 };
 
-window.online = onlineLobby; 
+window.online = onlineLobby; // Critical link for onclick="online.join()"
 loop();
