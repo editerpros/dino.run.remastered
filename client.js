@@ -1,4 +1,4 @@
-/** client.js - Multi-Player & Lobby Sync */
+/** client.js - Multiplayer Networking */
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
 const client = {
@@ -18,33 +18,33 @@ const client = {
         socket.on('lobby-update', (data) => {
             const list = document.getElementById('player-list');
             const countTag = document.getElementById('player-count');
-            
-            // Update UI with player count
             if(countTag) countTag.innerText = `PLAYERS: ${data.count}`;
             list.innerHTML = Object.values(data.players)
                 .map(p => `<div style="margin:5px;">• ${p.nickname.toUpperCase()}</div>`).join('');
         });
 
         socket.on('start-multiplayer', () => game.start('online'));
-
-        socket.on('player-moved', (data) => {
-            this.remotePlayers[data.id] = data;
-        });
-
+        socket.on('player-moved', (d) => this.remotePlayers[d.id] = d);
         socket.on('player-left', (id) => delete this.remotePlayers[id]);
-        socket.on('error-msg', (msg) => alert(msg));
+        socket.on('error-msg', (m) => alert(m));
     },
 
-    // Function to copy Room ID to clipboard
-    copyRoomID() {
-        const id = document.getElementById('display-room-id').innerText;
-        navigator.clipboard.writeText(id).then(() => {
-            alert("Room ID Copied: " + id);
-        });
+    // FIX: Explicitly define submitScore so script.js can call it
+    submitScore(name, score) {
+        if (socket.connected) {
+            socket.emit('submit-score', { name, score });
+        }
     },
 
     sendSync(nickname, x, y, duck) {
-        if (this.roomId) socket.emit('sync', { roomId: this.roomId, nickname, x, y, duck });
+        if (this.roomId) {
+            socket.emit('sync', { roomId: this.roomId, nickname, x, y, duck });
+        }
+    },
+
+    copyRoomID() {
+        const id = document.getElementById('display-room-id').innerText;
+        navigator.clipboard.writeText(id).then(() => alert("ID Copied: " + id));
     }
 };
 
@@ -52,7 +52,7 @@ const onlineLobby = {
     create: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
         const max = document.getElementById('max-p').value;
-        socket.emit('create-room', { max: max, nickname: nick });
+        socket.emit('create-room', { max, nickname: nick });
     },
     join: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
@@ -64,6 +64,8 @@ const onlineLobby = {
     }
 };
 
+// BRIDGE: Attach objects to window so they are globally accessible
+window.client = client;
 window.online = onlineLobby;
-window.copyRoomID = () => client.copyRoomID(); // Global bridge for HTML
+window.copyRoomID = () => client.copyRoomID();
 client.init();
