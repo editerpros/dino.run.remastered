@@ -17,7 +17,7 @@ const assetNames = [
 
 assetNames.forEach(name => {
     assets[name] = new Image();
-    assets[name].src = `assets/${name}.png`; // Ensure assets folder exists
+    assets[name].src = `assets/${name}.png`; //
 });
 
 let state = {
@@ -41,7 +41,7 @@ class Entity {
     }
     draw() {
         let img;
-        const animFrame = Math.floor(state.frame / 10) % 2;
+        const animFrame = Math.floor(state.frame / 10) % 2; //
         if (this.type === 'dino') {
             if (state.mode === 'over') img = assets['DinoDead'];
             else if (!this.ground) img = assets['DinoJump'];
@@ -58,7 +58,6 @@ class Entity {
 
 let player1 = null;
 
-// UI and Game controls
 const ui = {
     show: (name) => {
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
@@ -81,7 +80,7 @@ const game = {
     restart: () => game.start(state.mode)
 };
 
-// Input and Physics logic
+// Controls
 window.onkeydown = (e) => { 
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player1?.ground) {
         player1.vy = -12; player1.ground = false;
@@ -134,7 +133,8 @@ const onlineLobby = {
     create: () => {
         if(!socket.connected) return alert("Connecting to server...");
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
-        socket.emit('create-room', { max: 5, nickname: nick });
+        const max = parseInt(document.getElementById('max-p').value);
+        socket.emit('create-room', { max: max, nickname: nick });
     },
     join: () => {
         if(!socket.connected) return alert("Connecting to server...");
@@ -147,7 +147,8 @@ const onlineLobby = {
 socket.on('joined', (data) => { online.roomId = data.roomId; game.start('online'); });
 socket.on('player-moved', (data) => { online.remotePlayers[data.id] = data; });
 
-window.online = onlineLobby; // Essential for onclick="online.join()"
+// Attach to window so HTML can see it
+window.online = onlineLobby; 
 window.ui = ui;
 window.game = game;
 loop();
