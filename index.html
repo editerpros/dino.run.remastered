@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YOUR-ID-HERE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-QVKVE9QYBY');
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Dino Run Remastered 🦕</title>
@@ -35,7 +43,7 @@
                 <input type="text" id="room-input" placeholder="ENTER ROOM ID" style="padding: 10px; font-family: 'Press Start 2P'; font-size: 8px;">
                 <button onclick="online.join()">JOIN ROOM</button>
                 <hr>
-                <label style="font-size: 8px; color: #535353;">MAX PLAYERS: 
+                <label style="font-size: 8px; color: #535353;">MAX: 
                     <input type="number" id="max-p" value="5" min="2" max="10" style="width: 50px;">
                 </label>
                 <button onclick="online.create()">CREATE ROOM</button>
@@ -46,8 +54,8 @@
         <div id="menu-settings" class="overlay hidden">
             <h2>SETTINGS</h2>
             <div class="btn-group">
-                <button id="toggle-sound" onclick="game.toggleSound()">SOUND: ON</button>
-                <p class="credits">CREDITS: Advait8370</p>
+                <button id="toggle-sound">SOUND: ON</button>
+                <p class="credits" style="font-size: 7px; color: #535353; margin: 10px 0;">CREDITS: Advait8370</p>
                 <button class="back" onclick="ui.show('main')">BACK</button>
             </div>
         </div>
@@ -55,9 +63,8 @@
         <div id="menu-updates" class="overlay hidden">
             <h2>LOGS</h2>
             <div class="scroll-box">
-                <p><span>v26.3:</span> Online Multiplayer & Lobby System.</p>
-                <p><span>v26.2:</span> Real Pixel Sprites & Scaling Fix.</p>
-                <p><span>v26.0:</span> Menu System & Local MP.</p>
+                <p><span>v26.3:</span> Online Multiplayer & Analytics.</p>
+                <p><span>v26.2:</span> Real Pixel Sprites & UI Fix.</p>
             </div>
             <button class="back" onclick="ui.show('main')">BACK</button>
         </div>
