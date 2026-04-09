@@ -77,22 +77,39 @@ const ui = {
 
 const game = {
     start: (mode) => {
+        // --- CRITICAL RESET LOGIC ---
         state.mode = mode;
         state.score = 0;
         state.speed = 6;
-        state.entities = [];
+        state.frame = 0; // Fix: Reset frame count for obstacle timing
+        state.entities = []; // Fix: Clear old obstacles so you don't die instantly
+        
         player1 = new Entity(50, 150, 40, 44, 'dino', '#535353');
-        if (mode === 'local') player2 = new Entity(100, 150, 40, 44, 'dino', '#e05c2a');
+        player1.vy = 0; // Fix: Reset jump velocity
+        
+        if (mode === 'local') {
+            player2 = new Entity(100, 150, 40, 44, 'dino', '#e05c2a');
+            player2.vy = 0;
+        } else {
+            player2 = null;
+        }
+        
+        online.remotePlayers = {}; // Clear other players
+        
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
         document.getElementById('game-stats').classList.remove('hidden');
+        document.getElementById('game-over').classList.add('hidden'); // Ensure game over UI is gone
     },
-    restart: () => game.start(state.mode)
+    restart: () => {
+        game.start(state.mode);
+    }
 };
 
 // Controls
 const keys = {};
 window.onkeydown = (e) => {
     keys[e.code] = true;
+    if (state.mode === 'menu' || state.mode === 'over') return;
     if ((e.code === 'Space' || e.code === 'ArrowUp') && player1) jump(player1);
     if (e.code === 'KeyW' && player2) jump(player2);
 };
@@ -101,7 +118,6 @@ window.onkeyup = (e) => keys[e.code] = false;
 // Mobile Touch Jump
 window.addEventListener('touchstart', (e) => {
     if(state.mode !== 'menu' && state.mode !== 'over') {
-        // Prevent jumping if a menu button or input is tapped
         if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
             jump(player1);
         }
@@ -112,6 +128,7 @@ function jump(p) { if (p && p.ground) { p.vy = -12; p.ground = false; } }
 
 function update() {
     if (state.mode === 'menu' || state.mode === 'over') return;
+    
     state.frame++;
     state.score += 0.1;
     state.speed = Math.min(14, 6 + (state.score / 500));
@@ -133,26 +150,45 @@ function update() {
         if (player2.y > 150) { player2.y = 150; player2.ground = true; }
     }
 
+    // Spawn Obstacles
     if (state.frame % 80 === 0) {
         state.entities.push(new Entity(W, 160, 25, 35, 'cactus', '#535353'));
     }
 
     state.entities.forEach(ent => {
         ent.x -= state.speed;
+        // Collision checks
         if (player1 && checkHit(player1, ent)) gameOver(state.mode === 'local' ? "PLAYER 2 WINS!" : "GAME OVER");
+        if (player2 && checkHit(player2, ent)) gameOver("PLAYER 1 WINS!");
     });
+
+    // Cleanup off-screen entities
+    state.entities = state.entities.filter(ent => ent.x + ent.w > 0);
 
     document.getElementById('score-val').innerText = Math.floor(state.score).toString().padStart(5, '0');
 }
 
 function checkHit(p, e) {
-    return p.x < e.x + e.w && p.x + p.w > e.x && p.y < e.y + e.h && p.y + p.h > e.y;
+    const pDucking = p.duck;
+    const pHeight = pDucking ? p.h / 2 : p.h;
+    const pY = pDucking ? p.y + (p.h / 2) : p.y;
+    
+    return p.x < e.x + e.w && 
+           p.x + p.w > e.x && 
+           pY < e.y + e.h && 
+           pY + pHeight > e.y;
 }
 
 function gameOver(msg) {
     state.mode = 'over';
     document.getElementById('game-over').classList.remove('hidden');
     document.getElementById('winner-text').innerText = msg;
+    
+    // Save high score
+    if (state.score > state.hiScore) {
+        state.hiScore = state.score;
+        document.getElementById('hi-val').innerText = Math.floor(state.hiScore).toString().padStart(5, '0');
+    }
 }
 
 // Orientation Change Fix
@@ -163,8 +199,11 @@ window.addEventListener('resize', () => {
 
 function loop() {
     ctx.clearRect(0, 0, W, H);
+    
+    // Draw Ground
     ctx.fillStyle = '#535353';
     ctx.fillRect(0, 190, W, 2);
+    
     if (state.mode !== 'menu') {
         update();
         if(player1) player1.draw();
