@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 const W = 800, H = 200;
 canvas.width = W; canvas.height = H;
 
+// Ensure HTTPS is used for the socket connection to avoid mixed-content blocks
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
 // --- ASSET LOADER ---
@@ -17,7 +18,7 @@ const assetNames = [
 
 assetNames.forEach(name => {
     assets[name] = new Image();
-    assets[name].src = `assets/${name}.png`; 
+    assets[name].src = `assets/${name}.png`; // Updated path for the assets folder
 });
 
 let state = {
@@ -63,7 +64,7 @@ class Entity {
 
     draw() {
         let img;
-        const animFrame = Math.floor(state.frame / 10) % 2;
+        const animFrame = Math.floor(state.frame / 10) % 2; // Frame cycling
 
         if (this.type === 'dino') {
             if (state.mode === 'over') img = assets['DinoDead'];
@@ -148,6 +149,8 @@ function update() {
         player1.duck = keys['ArrowDown'] || keys['KeyS'];
         player1.vy += 0.6; player1.y += player1.vy;
         if (player1.y > 150) { player1.y = 150; player1.ground = true; }
+        
+        // Sync player state with server
         if(state.mode === 'online' && online.roomId) {
             socket.emit('sync', { 
                 roomId: online.roomId, 
@@ -229,6 +232,7 @@ function loop() {
         update();
         if(player1) player1.draw();
         
+        // Multiplayer shadow dinos
         Object.values(online.remotePlayers).forEach(p => { 
             const anim = Math.floor(state.frame / 10) % 2;
             const img = (anim === 0) ? assets['DinoRun1'] : assets['DinoRun2'];
@@ -248,16 +252,25 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// --- MULTIPLAYER LOGIC ---
+// --- MULTIPLAYER SOCKET HANDLERS ---
 socket.on('update-leaderboard', (data) => {
     const list = document.getElementById('leaderboard-list');
     list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name.toUpperCase()} - ${s.score}</div>`).join('');
 });
 
-socket.on('joined', (data) => { online.roomId = data.roomId; game.start('online'); });
+socket.on('joined', (data) => { 
+    online.roomId = data.roomId; 
+    game.start('online'); 
+});
 
 socket.on('player-moved', (data) => {
-    online.remotePlayers[data.id] = { x: data.x, y: data.y, duck: data.duck };
+    // Correctly handle nicknames and positions from server
+    online.remotePlayers[data.id] = { 
+        x: data.x, 
+        y: data.y, 
+        duck: data.duck,
+        nickname: data.nickname 
+    };
 });
 
 // Bridge to HTML buttons
@@ -269,8 +282,8 @@ const onlineLobby = {
     },
     join: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
-        const id = document.getElementById('room-input').value;
-        if(id) socket.emit('join-room', { roomId: id, nickname: nick });
+        const id = document.getElementById('room-input').value.trim();
+        if(id) socket.emit('join-room', { roomId: id, nickname: nick }); // Fix: send object
     }
 };
 
