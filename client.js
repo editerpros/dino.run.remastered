@@ -1,4 +1,4 @@
-/** client.js - Lobby & Admin Start Logic */
+/** client.js - Multi-Player & Lobby Sync */
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
 const client = {
@@ -9,22 +9,23 @@ const client = {
     init() {
         socket.on('joined', (data) => {
             this.roomId = data.roomId;
-            this.isAdmin = data.isAdmin; // Server tells us if we are admin
-            
-            ui.show('lobby'); // Switch to lobby screen
+            this.isAdmin = data.isAdmin;
+            ui.show('lobby');
             document.getElementById('display-room-id').innerText = data.roomId;
-            
             if(this.isAdmin) document.getElementById('admin-start-btn').classList.remove('hidden');
         });
 
-        socket.on('lobby-update', (players) => {
+        socket.on('lobby-update', (data) => {
             const list = document.getElementById('player-list');
-            list.innerHTML = Object.values(players).map(p => `<div>${p.nickname.toUpperCase()}</div>`).join('');
+            const countTag = document.getElementById('player-count');
+            
+            // Update UI with player count
+            if(countTag) countTag.innerText = `PLAYERS: ${data.count}`;
+            list.innerHTML = Object.values(data.players)
+                .map(p => `<div style="margin:5px;">• ${p.nickname.toUpperCase()}</div>`).join('');
         });
 
-        socket.on('start-multiplayer', () => {
-            game.start('online'); // Everyone starts at the same time
-        });
+        socket.on('start-multiplayer', () => game.start('online'));
 
         socket.on('player-moved', (data) => {
             this.remotePlayers[data.id] = data;
@@ -32,10 +33,13 @@ const client = {
 
         socket.on('player-left', (id) => delete this.remotePlayers[id]);
         socket.on('error-msg', (msg) => alert(msg));
-        
-        socket.on('update-leaderboard', (data) => {
-            const list = document.getElementById('leaderboard-list');
-            if (list) list.innerHTML = data.map((s, i) => `<div>${i+1}. ${s.name} - ${s.score}</div>`).join('');
+    },
+
+    // Function to copy Room ID to clipboard
+    copyRoomID() {
+        const id = document.getElementById('display-room-id').innerText;
+        navigator.clipboard.writeText(id).then(() => {
+            alert("Room ID Copied: " + id);
         });
     },
 
@@ -47,7 +51,8 @@ const client = {
 const onlineLobby = {
     create: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
-        socket.emit('create-room', { max: 5, nickname: nick });
+        const max = document.getElementById('max-p').value;
+        socket.emit('create-room', { max: max, nickname: nick });
     },
     join: () => {
         const nick = document.getElementById('nick-input').value.trim() || "Dino";
@@ -60,4 +65,5 @@ const onlineLobby = {
 };
 
 window.online = onlineLobby;
+window.copyRoomID = () => client.copyRoomID(); // Global bridge for HTML
 client.init();
