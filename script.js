@@ -3,10 +3,9 @@ const ctx = canvas.getContext('2d');
 const W = 800, H = 200;
 canvas.width = W; canvas.height = H;
 
-// 1. Socket Setup
+// Socket Setup
 const socket = io("https://dino-run-remastered-server.onrender.com");
 
-// 2. Initial State
 let state = {
     mode: 'menu',
     score: 0,
@@ -40,7 +39,6 @@ class Entity {
 let player1 = null, player2 = null;
 const online = { roomId: null, remotePlayers: {} };
 
-// 3. UI and Game Control
 const ui = {
     show: (name) => {
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
@@ -51,9 +49,11 @@ const ui = {
 
 const game = {
     start: (mode) => {
-        console.log("Initializing Game Mode:", mode);
-        
-        // Full Reset
+        // Analytics
+        if(typeof gtag === 'function') {
+            gtag('event', 'game_start', { 'game_mode': mode });
+        }
+
         state.mode = mode;
         state.score = 0;
         state.speed = 6;
@@ -61,7 +61,6 @@ const game = {
         state.entities = [];
         online.remotePlayers = {};
 
-        // Re-instantiate Players
         player1 = new Entity(50, 150, 40, 44, 'dino', '#535353');
         if (mode === 'local') {
             player2 = new Entity(100, 150, 40, 44, 'dino', '#e05c2a');
@@ -69,7 +68,6 @@ const game = {
             player2 = null;
         }
 
-        // UI Reset
         document.getElementById('game-over').classList.add('hidden');
         document.getElementById('game-stats').classList.remove('hidden');
         document.querySelectorAll('.overlay').forEach(el => el.classList.add('hidden'));
@@ -79,7 +77,6 @@ const game = {
     }
 };
 
-// 4. Input Handling
 const keys = {};
 window.onkeydown = (e) => {
     keys[e.code] = true;
@@ -97,7 +94,6 @@ window.addEventListener('touchstart', (e) => {
 
 function jump(p) { if (p && p.ground) { p.vy = -12; p.ground = false; } }
 
-// 5. Physics and Logic
 function update() {
     if (state.mode === 'menu' || state.mode === 'over') return;
     
@@ -126,7 +122,7 @@ function update() {
         state.entities.push(new Entity(W, 160, 25, 35, 'cactus', '#535353'));
     }
 
-    state.entities.forEach((ent, index) => {
+    state.entities.forEach((ent) => {
         ent.x -= state.speed;
         if (player1 && checkHit(player1, ent)) gameOver(state.mode === 'local' ? "PLAYER 2 WINS!" : "GAME OVER");
         if (player2 && checkHit(player2, ent)) gameOver("PLAYER 1 WINS!");
@@ -143,16 +139,20 @@ function checkHit(p, e) {
 }
 
 function gameOver(msg) {
+    // Analytics
+    if(typeof gtag === 'function') {
+        gtag('event', 'game_over', { 'score': Math.floor(state.score), 'game_mode': state.mode });
+    }
+
     state.mode = 'over';
     document.getElementById('game-over').classList.remove('hidden');
     document.getElementById('winner-text').innerText = msg;
 }
 
-// 6. Main Loop
 function loop() {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#535353';
-    ctx.fillRect(0, 190, W, 2); // Ground Line
+    ctx.fillRect(0, 190, W, 2); 
 
     if (state.mode !== 'menu') {
         update();
@@ -164,7 +164,6 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// Socket Listeners
 socket.on('joined', (data) => {
     online.roomId = data.roomId;
     game.start('online');
@@ -178,6 +177,19 @@ socket.on('player-moved', (data) => {
     online.remotePlayers[data.id].y = data.y;
     online.remotePlayers[data.id].duck = data.duck;
 });
+
+const onlineLobby = {
+    create: () => {
+        const m = document.getElementById('max-p').value;
+        socket.emit('create-room', { max: parseInt(m) });
+    },
+    join: () => {
+        const id = document.getElementById('room-input').value;
+        if(id) socket.emit('join-room', id);
+    }
+};
+// Attach to window so HTML can find them
+window.online = onlineLobby;
 
 window.addEventListener('resize', () => { canvas.width = 800; canvas.height = 200; });
 loop();
