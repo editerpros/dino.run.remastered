@@ -1,7 +1,7 @@
 🦕 Dino Run Remastered
 A faithful recreation of the Chrome Dino game — fully browser-based, zero dependencies.
 Play Online
-If hosted on : https://advait8370.github.io/dino.run.remastered/
+If hosted on : https://editerpros.github.io/dino.run.remastered/
 Features
 
 🦕 Pixel-art dino with run, jump & duck animations
